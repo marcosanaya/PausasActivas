@@ -5,11 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using static ConsoleForLinux.Helpers.DSpaceCollectionsResponse;
 
 namespace ConsoleForLinux.Helpers
 {
-    public class DSpaceCollectionsResponse
+    public sealed class DSpaceCollectionsResponse
     {
+        [JsonRequired]
         [JsonPropertyName("_embedded")]
         public EmbeddedObject Embedded { get; set; }
 
@@ -45,4 +47,12 @@ namespace ConsoleForLinux.Helpers
             }
         }
     }
+
+    [JsonSourceGenerationOptions(WriteIndented = true)]
+    [JsonSerializable(typeof(DSpaceCollectionsResponse))]
+    [JsonSerializable(typeof(EmbeddedObject))]
+    [JsonSerializable(typeof(DSpaceCollection))]
+    [JsonSerializable(typeof(List<DSpaceCollection>))]
+    public partial class DSpaceResponseContext : JsonSerializerContext { }
+
 }

@@ -220,7 +220,6 @@ void CompleteParams()
 ProcessParams  ReadingParams()
 {
     var exceptionManager = GenericsManager.GetInstance();
-
     List<string> rawlines;
     StringBuilder data = new();
     ProcessParams result = new();
@@ -232,7 +231,7 @@ ProcessParams  ReadingParams()
 
     try
     {
-        result = JsonSerializer.Deserialize<ProcessParams>(strInfo) ?? new();
+        result = JsonSerializer.Deserialize<ProcessParams>(strInfo, ParamsContext.Default.ProcessParams) ?? new();
         data.Clear();
     }
     catch (Exception e)

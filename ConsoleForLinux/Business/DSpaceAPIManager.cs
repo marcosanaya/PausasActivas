@@ -152,7 +152,7 @@ namespace ConsoleForLinux.Business
                 if (response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
                     var body = response.Content.ReadAsStringAsync().Result;
-                    result = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(body) ?? new();
+                    result = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(body, DSpaceResponseContext.Default.DSpaceCollectionsResponse) ?? new();
                     var data = JsonDocument.Parse(body).RootElement.GetProperty("page");
                     result.Pagination.TotalElements = data.GetProperty("totalElements").Deserialize<int>();
                     result.Pagination.TotalPages = data.GetProperty("totalPages").Deserialize<int>();
@@ -169,7 +169,7 @@ namespace ConsoleForLinux.Business
                         if (response.StatusCode == System.Net.HttpStatusCode.OK)
                         {
                             body = response.Content.ReadAsStringAsync().Result;
-                            tmpresult = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(body) ?? new();
+                            tmpresult = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(body, DSpaceResponseContext.Default.DSpaceCollectionsResponse) ?? new();
                         }
                         if (requestType == RequestType.ForDSpaceCollections)
                             result.Embedded.Collections.AddRange(tmpresult.Embedded.Collections);
@@ -236,7 +236,7 @@ namespace ConsoleForLinux.Business
                     {
                         var body = response.Content.ReadAsStringAsync().Result;
                         var data = JsonDocument.Parse(body).RootElement.GetProperty("_embedded").GetProperty("searchResult");
-                        result = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(data) ?? new();
+                        result = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(data, DSpaceResponseContext.Default.DSpaceCollectionsResponse) ?? new();
                         result.Pagination.TotalElements = data.GetProperty("page").GetProperty("totalElements").Deserialize<int>();
                         result.Pagination.TotalPages = data.GetProperty("page").GetProperty("totalPages").Deserialize<int>();
                         result.Pagination.CurrentPage = data.GetProperty("page").GetProperty("number").Deserialize<int>();
@@ -252,7 +252,7 @@ namespace ConsoleForLinux.Business
                             {
                                 body = response.Content.ReadAsStringAsync().Result;
                                 data = JsonDocument.Parse(body).RootElement.GetProperty("_embedded").GetProperty("searchResult");
-                                tmpresult = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(data) ?? new();
+                                tmpresult = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(data, DSpaceResponseContext.Default.DSpaceCollectionsResponse) ?? new();
                             }
                             result.Embedded.ItemsOfCollections.AddRange(tmpresult.Embedded.ItemsOfCollections);
                         }

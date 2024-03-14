@@ -44,4 +44,9 @@ namespace ConsoleForLinux.Clases
         [JsonPropertyName("ProxyPassword")]
         public string ProxyPassword { get; set; }
     }
+
+    [JsonSourceGenerationOptions(WriteIndented = true)]
+    [JsonSerializable(typeof(ProcessParams))]
+    internal partial class ParamsContext : JsonSerializerContext { }
+
 }
