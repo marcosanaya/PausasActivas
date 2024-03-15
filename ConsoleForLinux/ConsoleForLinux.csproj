@@ -8,6 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Update="Entornos.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="ParamConfiguration.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

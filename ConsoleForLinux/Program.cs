@@ -49,7 +49,7 @@ void CollectDataFromFileSystem(object? obj)
     }
     catch (Exception e)
     {
-        exceptionManager.PrintExceptionMessage(e);
+        GenericsManager.PrintExceptionMessage(e);
     }
 }
 
@@ -81,7 +81,7 @@ void CollectDataFromDSpace()
     }
     catch (Exception e)
     {
-        exceptionManager.PrintExceptionMessage(e);
+        GenericsManager.PrintExceptionMessage(e);
     }
 }
 
@@ -236,7 +236,7 @@ ProcessParams  ReadingParams()
     }
     catch (Exception e)
     {
-        exceptionManager.PrintExceptionMessage(e);
+        GenericsManager.PrintExceptionMessage(e);
     }
 
     return result;

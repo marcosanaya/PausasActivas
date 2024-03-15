@@ -75,7 +75,7 @@ namespace ConsoleForLinux.Business
             }
             catch (Exception e)
             {
-                exceptionManager.PrintExceptionMessage(e);
+                GenericsManager.PrintExceptionMessage(e);
                 Environment.Exit(0);
             }
 
@@ -152,11 +152,8 @@ namespace ConsoleForLinux.Business
                 if (response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
                     var body = response.Content.ReadAsStringAsync().Result;
-                    result = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(body, DSpaceResponseContext.Default.DSpaceCollectionsResponse) ?? new();
-                    var data = JsonDocument.Parse(body).RootElement.GetProperty("page");
-                    result.Pagination.TotalElements = data.GetProperty("totalElements").Deserialize<int>();
-                    result.Pagination.TotalPages = data.GetProperty("totalPages").Deserialize<int>();
-                    result.Pagination.CurrentPage = data.GetProperty("number").Deserialize<int>();
+                    CustomSerializer serializer = new();
+                    result = serializer.GetObjectPagedDeserialized(body);
 
                     Console.WriteLine("Reading {0} elements", result.Pagination.TotalElements);
 
@@ -164,12 +161,13 @@ namespace ConsoleForLinux.Business
                     {
                         string pageparams = "?page=" + i.ToString() + "&size=20";
                         var urlrequest = string.Concat(URLRequestPagination, pageparams);
+                        
                         request = MakeRequestMessage(urlrequest);
                         response = client.Send(request);
                         if (response.StatusCode == System.Net.HttpStatusCode.OK)
                         {
                             body = response.Content.ReadAsStringAsync().Result;
-                            tmpresult = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(body, DSpaceResponseContext.Default.DSpaceCollectionsResponse) ?? new();
+                            tmpresult = serializer.GetObjectSimpleDeserialized(body);
                         }
                         if (requestType == RequestType.ForDSpaceCollections)
                             result.Embedded.Collections.AddRange(tmpresult.Embedded.Collections);
@@ -182,9 +180,7 @@ namespace ConsoleForLinux.Business
             }
             catch (Exception e)
             {
-                Console.Clear();
-                exceptionManager.PrintExceptionMessage(e);
-
+                GenericsManager.PrintExceptionMessage(e);
                 Console.WriteLine("It can not get collections list.");
                 Environment.Exit(0);
             }
@@ -207,13 +203,15 @@ namespace ConsoleForLinux.Business
 
         public void ValidateFilterCollections()
         {
+            var filterCollections = new List<string>();
+
             if (config.Collections != null && config.Collections.Count > 0)
                 foreach (var item in config.Collections)
                     if (!DSpaceCollectionsIDList.Exists(x => x.Equals(item)))
-                    {
                         Console.WriteLine("Collection {0} not found in DSpace {1}", item, config.Host);
-                        Environment.Exit(0);
-                    }
+                    else
+                        filterCollections.Add(item);
+            DSpaceCollectionsIDList = filterCollections;
         }
 
         public void ProcessesItemsCollectionsValidated()
@@ -231,16 +229,17 @@ namespace ConsoleForLinux.Business
                 try
                 {
                     var response = client.Send(request);
+                    CustomSerializer serializer = new CustomSerializer();
 
                     if (response.StatusCode == System.Net.HttpStatusCode.OK)
                     {
                         var body = response.Content.ReadAsStringAsync().Result;
-                        var data = JsonDocument.Parse(body).RootElement.GetProperty("_embedded").GetProperty("searchResult");
-                        result = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(data, DSpaceResponseContext.Default.DSpaceCollectionsResponse) ?? new();
-                        result.Pagination.TotalElements = data.GetProperty("page").GetProperty("totalElements").Deserialize<int>();
-                        result.Pagination.TotalPages = data.GetProperty("page").GetProperty("totalPages").Deserialize<int>();
-                        result.Pagination.CurrentPage = data.GetProperty("page").GetProperty("number").Deserialize<int>();
+                        var data = JsonDocument.Parse(body).RootElement.GetProperty("_embedded").GetProperty("searchResult").ToString();
+                        result = serializer.GetObjectPagedDeserialized(data);
                         Console.WriteLine("Reading {0} elements", result.Pagination.TotalElements);
+                        
+                        tmpresult = serializer.GetSearchResulObjectDeserialized(data);
+                        result.Embedded.Items.AddRange(tmpresult.Embedded.Items);
 
                         for (int i = 1; i < result.Pagination.TotalPages; i++)
                         {
@@ -251,18 +250,16 @@ namespace ConsoleForLinux.Business
                             if (response.StatusCode == System.Net.HttpStatusCode.OK)
                             {
                                 body = response.Content.ReadAsStringAsync().Result;
-                                data = JsonDocument.Parse(body).RootElement.GetProperty("_embedded").GetProperty("searchResult");
-                                tmpresult = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(data, DSpaceResponseContext.Default.DSpaceCollectionsResponse) ?? new();
+                                tmpresult = serializer.GetSearchResulObjectDeserialized(data);
+                                result.Embedded.Items.AddRange(tmpresult.Embedded.Items);
                             }
-                            result.Embedded.ItemsOfCollections.AddRange(tmpresult.Embedded.ItemsOfCollections);
                         }
-                        result.Embedded.ItemsOfCollections.ForEach(x => DSpaceItemsIDList.Add(x.ID));
+                        result.Embedded.Items.ForEach(x => DSpaceItemsIDList.Add(x.ID));
                     }
                 }
                 catch (Exception e)
                 {
-                    Console.Clear();
-                    exceptionManager.PrintExceptionMessage(e);
+                    GenericsManager.PrintExceptionMessage(e);
 
                     Console.WriteLine("It can not get collections list.");
                     Environment.Exit(0);

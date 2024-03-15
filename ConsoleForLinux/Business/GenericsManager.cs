@@ -23,6 +23,7 @@ namespace ConsoleForLinux.Business
             _instance ??= new();
             return _instance;
         }
+
         public void SetParamProcess(ProcessParams infoParams)
         {
             if (infoParams is not null)
@@ -31,7 +32,7 @@ namespace ConsoleForLinux.Business
             }
         }
 
-        public void PrintExceptionMessage(Exception exception)
+        public static void PrintExceptionMessage(Exception exception)
         {
             Console.WriteLine($"{exception.Message}");
             Console.WriteLine();
