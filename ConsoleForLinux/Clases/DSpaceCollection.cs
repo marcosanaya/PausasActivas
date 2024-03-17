@@ -24,6 +24,8 @@ namespace ConsoleForLinux.Clases
         [JsonPropertyName("type")]
         public string Type{ get; set; }
 
+        public List<DSpaceMetadataDefinition> Metadata {  get; set; }
+
         public DSpaceCollection()
         {
             ID = string.Empty;
@@ -31,6 +33,12 @@ namespace ConsoleForLinux.Clases
             Handle = string.Empty;
             UUID = string.Empty;
             Type = string.Empty;
+            Metadata = [];
         }
     }
+
+    [JsonSerializable(typeof(DSpaceCollection))]
+    [JsonSerializable(typeof(List<DSpaceCollection>))]
+    [JsonSerializable(typeof(string))]
+    public partial class DSpaceCollectionContext : JsonSerializerContext { }
 }

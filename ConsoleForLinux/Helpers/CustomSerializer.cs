@@ -34,10 +34,31 @@ namespace ConsoleForLinux.Helpers
         public DSpaceCollectionsResponse GetSearchResulObjectDeserialized(string data)
         {
             DSpaceCollectionsResponse result = new();
-            var tmp = JsonDocument.Parse(data).RootElement.GetProperty("_embedded").GetProperty("objects");
-            var newtmp = JsonSerializer.Deserialize<List<DSpaceCollectionsResponse>>(tmp) ?? new();
-            newtmp.ForEach(d => result.Embedded.Items.Add(d.Embedded.ItemOfCollection));
-            
+            var tmp = JsonDocument.Parse(data).RootElement.GetProperty("_embedded");
+
+            var objectsIterator = tmp.GetProperty("objects").EnumerateArray();
+            List<DSpaceCollection> items = [];
+
+            foreach (var obj in objectsIterator)
+            {
+                var valueItem = obj.GetProperty("_embedded").GetProperty("indexableObject");
+                var objectID = valueItem.GetProperty("id");
+                var metas = valueItem.GetProperty("metadata");
+
+                DSpaceCollection dspaceItem = JsonSerializer.Deserialize<DSpaceCollection>(valueItem.ToString(), DSpaceCollectionContext.Default.DSpaceCollection) ?? new();
+
+                foreach (var meta in metas.EnumerateObject())
+                    foreach (var item in meta.Value.EnumerateArray())
+                        dspaceItem.Metadata.Add(new DSpaceMetadataDefinition
+                        {
+                            Name = meta.Name,
+                            Value = item.ToString()
+                        });
+                items.Add(dspaceItem);
+            }
+
+            result.Embedded.Items = items;
+
             return result;
         }
     }

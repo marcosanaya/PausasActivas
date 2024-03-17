@@ -7,6 +7,11 @@ using System.Text;
 using System.Text.Json;
 
 ProcessParams infoParams;
+DateTime startTime = DateTime.Now;
+
+var dspaceManager = DSpaceAPIManager.GetInstance();
+var fileManager = FileResourcesManager.GetInstance();
+
 RunCommandWithBash("clear");
 Console.Clear();
 Console.WriteLine("Process to Attach resources from AtoM folders to DSpace.");
@@ -16,19 +21,34 @@ Console.WriteLine("reading params for process...");
 var currentDirectory  = Directory.GetCurrentDirectory();
 infoParams = ReadingParams();
 
-Thread dspaceData = new(CollectDataFromDSpace);
-dspaceData.Start();
+dspaceManager.StartProcess();
 
-Thread filesystemData = new(CollectDataFromFileSystem);
-filesystemData.Start();
+Thread mp = new(mainProcess);
+mp.Start();
 
 CompleteParams();
 
-//Console.WriteLine(JsonSerializer.Serialize(infoParams));
-Console.WriteLine("Fin del proceso");
 
 
-void CollectDataFromFileSystem(object? obj)
+void mainProcess()
+{
+    Thread dspaceData = new(CollectDataFromDSpace);
+    dspaceData.Start();
+
+    Thread filesystemData = new(CollectDataFromFileSystem);
+    filesystemData.Start();
+
+    while (true)
+        if (!dspaceManager.IsStillRunning())
+        {
+            //Console.WriteLine(JsonSerializer.Serialize(infoParams));
+            Console.WriteLine("Fin del proceso");
+            Console.WriteLine("Duración: {0}", DateTime.Now - startTime);
+            Environment.Exit(0);
+        }
+}
+
+void CollectDataFromFileSystem()
 {
     var exceptionManager = GenericsManager.GetInstance();
 
@@ -40,12 +60,13 @@ void CollectDataFromFileSystem(object? obj)
 
     try
     {
-        var manager = FileResourcesManager.GetInstance();
-        manager.SetParamProcess(infoParams);
-        Console.WriteLine("Reading Folders from {0}", manager.GetResourcePath());
+        fileManager.SetParamProcess(infoParams);
+        Console.WriteLine("Reading Folders from {0}", fileManager.GetResourcePath());
 
-        manager.SearchPDFFiles(manager.GetResourcePath());
-        Console.WriteLine("Finished");
+        fileManager.SearchPDFFiles(fileManager.GetResourcePath());
+        fileManager.SearchImageFiles();
+        fileManager.CalculatingHasFromFileSystem();
+        fileManager.StopProcess();
     }
     catch (Exception e)
     {
@@ -55,7 +76,6 @@ void CollectDataFromFileSystem(object? obj)
 
 void CollectDataFromDSpace()
 {
-    var manager = DSpaceAPIManager.GetInstance();
     var exceptionManager = GenericsManager.GetInstance();
 
     while (true)
@@ -66,18 +86,28 @@ void CollectDataFromDSpace()
     try
     {
         Console.WriteLine("Doing login at DSpace...");
-        manager.SetParamProcess(infoParams);
+        dspaceManager.SetParamProcess(infoParams);
         Console.WriteLine("Getting Session Token...");
-        manager.RequestXSRFTOKEN();
-        manager.MakeLogin();
+        dspaceManager.RequestXSRFTOKEN();
+        dspaceManager.MakeLogin();
 
         Console.WriteLine("Reading Collections from DSpace...");
-        manager.GetResponseProcessed(RequestType.ForDSpaceCollections);
+        dspaceManager.GetResponseProcessed(RequestType.ForDSpaceCollections);
         Console.WriteLine("Validating collections...");
-        manager.ValidateFilterCollections();
+        dspaceManager.ValidateFilterCollections();
 
         Console.WriteLine("Reading Items for Collections Validated from DSpace...");        
-        manager.ProcessesItemsCollectionsValidated();
+        dspaceManager.ProcessesItemsCollectionsValidated();
+
+        while (true)
+            if (!fileManager.IsStillRunning())
+            {
+                break;
+            }
+        
+        var filesScanned = fileManager.GetPDFPathFiles();
+        dspaceManager.AttacheImageFromFiles(filesScanned);
+        dspaceManager.StopProcess();
     }
     catch (Exception e)
     {

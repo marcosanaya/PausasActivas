@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace ConsoleForLinux.Business
 {
-    public sealed class DSpaceAPIManager
+    public sealed class DSpaceAPIManager: TimeProcess
     {
         private const string msgFailedToLogin = "Failed to login in DSpace, please check credential used.";
         private const string AuthorizationHeaderName = "Authorization";
@@ -37,6 +37,8 @@ namespace ConsoleForLinux.Business
         private ProcessParams config;
         private List<string> DSpaceCollectionsIDList = [];
         private List<string> DSpaceItemsIDList = [];
+
+        private DSpaceCollectionsResponse ItemsFromCollections = new();
 
         public static DSpaceAPIManager GetInstance()
         {
@@ -216,7 +218,6 @@ namespace ConsoleForLinux.Business
 
         public void ProcessesItemsCollectionsValidated()
         {
-            DSpaceCollectionsResponse result = new();
             DSpaceCollectionsResponse tmpresult = new();
             HttpClient client = new(handler);
 
@@ -235,26 +236,26 @@ namespace ConsoleForLinux.Business
                     {
                         var body = response.Content.ReadAsStringAsync().Result;
                         var data = JsonDocument.Parse(body).RootElement.GetProperty("_embedded").GetProperty("searchResult").ToString();
-                        result = serializer.GetObjectPagedDeserialized(data);
-                        Console.WriteLine("Reading {0} elements", result.Pagination.TotalElements);
-                        
-                        tmpresult = serializer.GetSearchResulObjectDeserialized(data);
-                        result.Embedded.Items.AddRange(tmpresult.Embedded.Items);
 
-                        for (int i = 1; i < result.Pagination.TotalPages; i++)
+                        ItemsFromCollections = serializer.GetObjectPagedDeserialized(data);
+                        Console.WriteLine("Reading {0} elements", ItemsFromCollections.Pagination.TotalElements);
+                        ItemsFromCollections = serializer.GetSearchResulObjectDeserialized(data);
+
+                        for (int i = 1; i < ItemsFromCollections.Pagination.TotalPages; i++)
                         {
                             string pageparams = "&page=" + i.ToString();
                             var urlrequest = string.Concat(URLRequestPagination, pageparams);
+
                             request = MakeRequestMessage(urlrequest);
                             response = client.Send(request);
                             if (response.StatusCode == System.Net.HttpStatusCode.OK)
                             {
                                 body = response.Content.ReadAsStringAsync().Result;
                                 tmpresult = serializer.GetSearchResulObjectDeserialized(data);
-                                result.Embedded.Items.AddRange(tmpresult.Embedded.Items);
+                                ItemsFromCollections.Embedded.Items.AddRange(tmpresult.Embedded.Items);
                             }
                         }
-                        result.Embedded.Items.ForEach(x => DSpaceItemsIDList.Add(x.ID));
+                        ItemsFromCollections.Embedded.Items.ForEach(x => DSpaceItemsIDList.Add(x.ID));
                     }
                 }
                 catch (Exception e)
@@ -265,6 +266,11 @@ namespace ConsoleForLinux.Business
                     Environment.Exit(0);
                 }
             }
+        }
+
+        internal void AttacheImageFromFiles(List<PDFPathFile> filesScanned)
+        {
+            throw new NotImplementedException();
         }
     }
 }

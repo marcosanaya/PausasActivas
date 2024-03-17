@@ -56,4 +56,20 @@ namespace ConsoleForLinux.Helpers
     [JsonSerializable(typeof(DSpacePagination))]
     public partial class DSpaceResponseContext : JsonSerializerContext { }
 
+    public class DSpaceArrayCollectionsResponse
+    {
+        [JsonRequired]
+        [JsonPropertyName("objects")]
+        public List<DSpaceCollection> ItemsOfCollection { get; set; }
+
+        public DSpaceArrayCollectionsResponse()
+        {
+            ItemsOfCollection = [];
+        }
+    }
+
+    [JsonSourceGenerationOptions(WriteIndented = true)]
+    [JsonSerializable(typeof(DSpaceArrayCollectionsResponse))]
+    [JsonSerializable(typeof(List<DSpaceArrayCollectionsResponse>))]
+    public partial class DSpaceArrayResponseContext : JsonSerializerContext { }
 }
