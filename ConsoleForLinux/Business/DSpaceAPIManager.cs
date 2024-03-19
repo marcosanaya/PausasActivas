@@ -21,6 +21,16 @@ namespace ConsoleForLinux.Business
         private readonly HttpClientHandler handler;
         private readonly GenericsManager exceptionManager;
 
+        private string URLRequestPagination = string.Empty;
+        private string XSRFTOKENValue = string.Empty;
+        private string Token = string.Empty;
+        private ProcessParams config;
+        private List<string> DSpaceCollectionsIDList = [];
+        private List<string> DSpaceItemsIDList = [];
+        private DSpaceCollectionsResponse ItemsFromCollections = new();
+
+        private List<PDFPathFile> processedFiles = [];
+
         private DSpaceAPIManager()
         {
             exceptionManager = GenericsManager.GetInstance();
@@ -30,15 +40,6 @@ namespace ConsoleForLinux.Business
                 UseProxy = false
             };
         }
-
-        private string URLRequestPagination = string.Empty;
-        private string XSRFTOKENValue = string.Empty;
-        private string Token = string.Empty;
-        private ProcessParams config;
-        private List<string> DSpaceCollectionsIDList = [];
-        private List<string> DSpaceItemsIDList = [];
-
-        private DSpaceCollectionsResponse ItemsFromCollections = new();
 
         public static DSpaceAPIManager GetInstance()
         {
@@ -268,7 +269,130 @@ namespace ConsoleForLinux.Business
             }
         }
 
-        internal void AttacheImageFromFiles(List<PDFPathFile> filesScanned)
+        public HashResourcesDB AttachImageFromFiles(List<PDFPathFile> filesScanned, HashResourcesDB db)
+        {
+            HashResourcesDB result = db;
+            var status = db.GetDataStatus();
+
+
+            if (filesScanned.Count == 0)
+            {
+                Console.WriteLine("There is no hash to write to db.");
+                StopProcess();
+            }
+
+            if (filesScanned.Count > 0)
+            {
+                List<string> equals = [];
+                db.ResourcesFiles.ForEach(x =>
+                {
+                    if (filesScanned.Any(f => f.HashResources.Equals(x.HashResources)))
+                        equals.Add(x.HashResources);
+                });
+                filesScanned.RemoveAll(x => equals.Contains(x.HashResources));
+                processedFiles = filesScanned;
+
+                if (ItemsFromCollections.Embedded.Items.Count > 0)
+                {
+                    //Procesando Adjuntado de Archivos, es mandatorio los recursos escaneados y no los recursos adjuntos en cada ítem.
+                    foreach (var item in filesScanned)
+                    {
+                        var datalist = ItemsFromCollections.Embedded.Items;
+                        var pdffilename = item.File.Name;
+
+                        DSpaceItem? dspaceItem = (from p in datalist
+                                                  where p.Metadata.Exists(x => x.Name.Equals("dc.format.filename")
+                                                     && x.Value.Equals(pdffilename))
+                                                  select new DSpaceItem()
+                                                  {
+                                                      HasImageFiles = item.HasImageFiles,
+                                                      ID = p.ID,
+                                                      UUID = p.UUID,
+                                                      PDFFileName = p.Name,
+                                                      Synchronized = true,
+                                                  })
+                                                  .FirstOrDefault();
+                        if (dspaceItem != null)
+                        {
+                            //DeleteResourcesFromItem(dspaceItem);
+                            RemoveBundleForItem(dspaceItem.UUID);
+                            CreateBundleForItem(dspaceItem.UUID, "ORIGINAL", item.ImageFiles);
+                            db.ResourcesDSpace.Add(dspaceItem);
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public List<PDFPathFile> GetProcessedFiles()
+        {
+            return processedFiles;
+        }
+        
+        
+        
+        
+        
+
+        private void CreateBundleForItem(string id, string bundleName, List<FileInfo> resources)
+        {
+            if (resources.Count > 0)
+                UpdateMiradorForItem(id, true);
+
+            AddFileResourceForItem(id, resources);
+        }
+
+        private void RemoveBundleForItem(string id)
+        {
+            var bundle = GetBundleForItem(id);
+            if(bundle != null)
+            {
+                var test = "detener";
+                //RemoveBundle(metadataValue);
+            }
+        }
+
+        private string GetBundleForItem(string id)
+        {
+            string result = string.Empty;
+
+            return result;
+        }
+
+        private void UpdateMiradorForItem(string id, bool metadataValue)
+        {
+            var datalist = ItemsFromCollections.Embedded.Items;
+            var item = (from p in datalist
+                        where p.UUID.Equals(id)
+                        select p)
+                        .FirstOrDefault();
+            if (item != null)
+            {
+                var valor = (from p in item.Metadata
+                             where p.Equals("dspace.iiif.enabled")
+                             select p.Value)
+                             .FirstOrDefault();
+
+                if(valor == null)
+                    AddMetadataForItem(id, metadataValue);
+                else
+                    UpdateMetadaForItem(id, metadataValue);
+            }
+        }
+
+        private void UpdateMetadaForItem(string id, bool metadataValue)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void AddMetadataForItem(string id, bool metadataValue)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void AddFileResourceForItem(string id, List<FileInfo> resources)
         {
             throw new NotImplementedException();
         }

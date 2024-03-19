@@ -6,12 +6,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
+using System.Text.Json;
+using ConsoleForLinux.Helpers;
 
 namespace ConsoleForLinux.Business
 {
     public sealed class FileResourcesManager: TimeProcess
     {
         private static FileResourcesManager? _instance;
+        private static string HashDBFileName = "HashDBFile.json";
 
         private ProcessParams config;
         private List<PDFPathFile> PDFPathFiles = [];
@@ -51,7 +54,7 @@ namespace ConsoleForLinux.Business
                 PDFPathFiles.Add(new PDFPathFile
                 {
                     File = item,
-                    HashResource = string.Empty,
+                    HashResources = string.Empty,
                     HasImageFiles = false,
                     ImageFiles = []
                 });
@@ -63,11 +66,11 @@ namespace ConsoleForLinux.Business
         {
             foreach (var item in PDFPathFiles)
             {
-                var filesAtDirectory = item.File.Directory.GetFiles();
+                var filesAtDirectory = item.File.Directory ?? new("");
 
-                foreach (var itemFile in filesAtDirectory)
+                foreach (var itemFile in filesAtDirectory.GetFiles())
                     if (itemFile.Extension.Length > 3)
-                        if (ImageExtensions.Contains(itemFile.Extension.Substring(1)))
+                        if (ImageExtensions.Contains(itemFile.Extension[1..]))
                             item.ImageFiles.Add(itemFile);
             }
         }
@@ -87,7 +90,7 @@ namespace ConsoleForLinux.Business
 
                 seedBytes = MD5.HashData(seedBytes);
                 seedBytes.ToList().ForEach(x => stringBuilder.Append(x.ToString("x2")));
-                item.HashResource = stringBuilder.ToString();
+                item.HashResources = stringBuilder.ToString();
                 item.HasImageFiles = item.ImageFiles.Count > 0;
             }
             /*Write Files Scanned*/
@@ -97,5 +100,68 @@ namespace ConsoleForLinux.Business
         {
             return IsStillRunning() ? [] : PDFPathFiles;
         }
+
+
+        public HashResourcesDB GetHashDB()
+        {
+            var exceptionManager = GenericsManager.GetInstance();
+            bool existsHasDB = File.Exists(HashDBFileName);
+
+            HashResourcesDB result = new();
+
+            if(existsHasDB)
+            {
+                List<string> rawlines;
+                StringBuilder data = new();
+                CustomSerializer serializer = new();
+
+                rawlines = File.ReadAllLines(HashDBFileName).ToList() ?? [];
+                rawlines.ForEach(x => data.AppendLine(x));
+
+                try
+                {
+                    result = serializer.GetHasDBDeserialized(data.ToString());
+                    data.Clear();
+                }
+                catch (Exception e)
+                {
+                    GenericsManager.PrintExceptionMessage(e);
+                }
+            }
+
+            return result;
+        }
+
+        public void WriteHashDB(List<DSpaceItem> dspaceInfo)
+        {
+            HashResourcesDB data = new();
+            var hashfiledbInfo = (from f in PDFPathFiles
+                                select new HashResourceItem()
+                                {
+                                    CountImages = f.ImageFiles.Count,
+                                    HashResources= f.HashResources,
+                                    HasImageFiles = f.HasImageFiles,
+                                    PDFFileName = f.File.Name,
+                                }).ToList();
+            try
+            {
+                if (hashfiledbInfo.Count > 0 && dspaceInfo.Count > 0)
+                {
+                    data.ResourcesFiles = hashfiledbInfo;
+                    data.ResourcesDSpace = dspaceInfo;
+
+                    var info = JsonSerializer.Serialize(data);
+                    File.WriteAllText(HashDBFileName, info.ToString());
+                }
+                else
+                    Console.WriteLine("*** No se escribió el HashDB ***");
+            }
+            catch (Exception e)
+            {
+                Console.Clear();
+                GenericsManager.PrintExceptionMessage(e);
+            }
+        }
+
     }
 }

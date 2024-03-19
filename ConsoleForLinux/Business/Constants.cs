@@ -11,4 +11,12 @@ namespace ConsoleForLinux.Business
         ForDSpaceCollections,
         ForDSpaceItems
     }
+
+    public enum HashDBDataStatus
+    {
+        NoData,
+        DSpaceData,
+        ResourceData,
+        DataComplete
+    }
 }

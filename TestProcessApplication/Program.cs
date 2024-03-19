@@ -17,7 +17,6 @@ foreach (var file in fileNames)
         using (StreamReader sr = new(fullnameFile))
         {
             string? line;
-            int lineNumber = 0;
 
             while ((line = sr.ReadLine()) != null)
             {

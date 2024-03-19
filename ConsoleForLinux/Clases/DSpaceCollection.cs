@@ -26,6 +26,8 @@ namespace ConsoleForLinux.Clases
 
         public List<DSpaceMetadataDefinition> Metadata {  get; set; }
 
+        public List<string> BitStreams { get; set; }
+
         public DSpaceCollection()
         {
             ID = string.Empty;
@@ -34,6 +36,7 @@ namespace ConsoleForLinux.Clases
             UUID = string.Empty;
             Type = string.Empty;
             Metadata = [];
+            BitStreams = [];
         }
     }
 

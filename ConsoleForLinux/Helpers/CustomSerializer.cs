@@ -61,5 +61,13 @@ namespace ConsoleForLinux.Helpers
 
             return result;
         }
+
+        public HashResourcesDB GetHasDBDeserialized(string data)
+        {
+            HashResourcesDB result = JsonSerializer.Deserialize<HashResourcesDB>(data, HashResourceDBContext.Default.HashResourcesDB) ?? new();
+
+            return result;
+        }
+
     }
 }

@@ -8,11 +8,11 @@ namespace ConsoleForLinux.Clases
 {
     public class PDFPathFile
     {
-        public FileInfo File { get; set; }
+        public required FileInfo File { get; set; }
 
         public bool HasImageFiles { get; set; }
 
-        public string HashResource { get; set; } = string.Empty;
+        public string HashResources { get; set; } = string.Empty;
 
         public List<FileInfo> ImageFiles { get; set; }
 

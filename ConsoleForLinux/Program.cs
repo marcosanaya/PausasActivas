@@ -104,9 +104,11 @@ void CollectDataFromDSpace()
             {
                 break;
             }
-        
-        var filesScanned = fileManager.GetPDFPathFiles();
-        dspaceManager.AttacheImageFromFiles(filesScanned);
+
+        var filesScanned = fileManager.GetPDFPathFiles() ?? [];
+        var db = fileManager.GetHashDB();
+
+        dspaceManager.AttachImageFromFiles(filesScanned, db);
         dspaceManager.StopProcess();
     }
     catch (Exception e)
