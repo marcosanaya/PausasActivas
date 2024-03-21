@@ -11,37 +11,37 @@ namespace ConsoleForLinux.Helpers
 {
     public class HashResourcesDB
     {
-        public List<HashResourceItem> ResourcesFiles { get; set; }
+        public List<ResourceItem> ResourcesFiles { get; set; }
 
-        public List<DSpaceItem> ResourcesDSpace { get; set; }
+        public List<DSpaceItem> DSpaceItems { get; set; }
 
         public HashResourcesDB()
         {
             ResourcesFiles = [];
-            ResourcesDSpace = [];
+            DSpaceItems = [];
         }
 
         public HashDBDataStatus GetDataStatus()
         {
             HashDBDataStatus result= HashDBDataStatus.NoData;
 
-            if (ResourcesFiles.Count == 0 && ResourcesDSpace.Count == 0)
+            if (ResourcesFiles.Count == 0 && DSpaceItems.Count == 0)
                 return HashDBDataStatus.NoData;
 
-            if (ResourcesFiles.Count >0 && ResourcesDSpace.Count > 0)
+            if (ResourcesFiles.Count >0 && DSpaceItems.Count > 0)
                 return HashDBDataStatus.DataComplete;
 
             if(ResourcesFiles.Count>0)
                 result = HashDBDataStatus.ResourceData;
             
-            if(ResourcesDSpace.Count>0)
+            if(DSpaceItems.Count>0)
                 result = HashDBDataStatus.DSpaceData;
 
             return result;
         }
     }
 
-    public class HashResourceItem
+    public class ResourceItem
     {
         public string PDFFileName { get; set; } = string.Empty;
         public string HashResources { get; set; } = string.Empty;
@@ -50,7 +50,7 @@ namespace ConsoleForLinux.Helpers
     }
 
     [JsonSerializable(typeof(HashResourcesDB))]
-    [JsonSerializable(typeof(List<HashResourceItem>))]
+    [JsonSerializable(typeof(List<ResourceItem>))]
     [JsonSerializable(typeof(List<DSpaceItem>))]
     [JsonSerializable(typeof(string))]
     public partial class HashResourceDBContext : JsonSerializerContext { }

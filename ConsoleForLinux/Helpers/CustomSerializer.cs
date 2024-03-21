@@ -24,9 +24,7 @@ namespace ConsoleForLinux.Helpers
             result = JsonSerializer.Deserialize<DSpaceCollectionsResponse>(data, DSpaceResponseContext.Default.DSpaceCollectionsResponse) ?? new();
 
             var dataDetail = JsonDocument.Parse(data).RootElement.GetProperty("page");
-            result.Pagination.TotalElements = int.Parse(dataDetail.GetProperty("totalElements").ToString());
-            result.Pagination.TotalPages = int.Parse(dataDetail.GetProperty("totalPages").ToString());
-            result.Pagination.CurrentPage = int.Parse(dataDetail.GetProperty("number").ToString());
+            result.Pagination = GetPagination(dataDetail);
 
             return result;
         }
@@ -42,7 +40,6 @@ namespace ConsoleForLinux.Helpers
             foreach (var obj in objectsIterator)
             {
                 var valueItem = obj.GetProperty("_embedded").GetProperty("indexableObject");
-                var objectID = valueItem.GetProperty("id");
                 var metas = valueItem.GetProperty("metadata");
 
                 DSpaceCollection dspaceItem = JsonSerializer.Deserialize<DSpaceCollection>(valueItem.ToString(), DSpaceCollectionContext.Default.DSpaceCollection) ?? new();
@@ -62,6 +59,16 @@ namespace ConsoleForLinux.Helpers
             return result;
         }
 
+        public DSpaceBitStreamResponse GetBitStreamDeserialized(JsonElement data)
+        {
+            DSpaceBitStreamResponse result = JsonSerializer.Deserialize<DSpaceBitStreamResponse>(data.ToString(), BitStreamResponseContext.Default.DSpaceBitStreamResponse) ?? new();
+
+            var page= data.GetProperty("page");
+            result.Pagination = GetPagination(page);
+
+            return result;
+        }
+
         public HashResourcesDB GetHasDBDeserialized(string data)
         {
             HashResourcesDB result = JsonSerializer.Deserialize<HashResourcesDB>(data, HashResourceDBContext.Default.HashResourcesDB) ?? new();
@@ -69,5 +76,15 @@ namespace ConsoleForLinux.Helpers
             return result;
         }
 
+        private DSpacePagination GetPagination(JsonElement dataDetail)
+        {
+            DSpacePagination result = new();
+
+            result.TotalElements = int.Parse(dataDetail.GetProperty("totalElements").ToString());
+            result.TotalPages = int.Parse(dataDetail.GetProperty("totalPages").ToString());
+            result.CurrentPage = int.Parse(dataDetail.GetProperty("number").ToString());
+
+            return result;
+        }
     }
 }

@@ -50,21 +50,25 @@ void mainProcess()
 
 void CollectDataFromFileSystem()
 {
-    var exceptionManager = GenericsManager.GetInstance();
-
     while (true)
-        if (CanLogin())
+        if (dspaceManager.IsLogged())
         {
             break;
         }
 
     try
     {
+        var allExtensions = dspaceManager.GetBitStreamFormats();
+        List<string> imageExtensions = [];
+
+        allExtensions.Where(e => e.MimeType.Contains("image/"))
+            .ToList()
+            .ForEach(r => r.Extensions.ForEach(x => imageExtensions.Add(x)));
+        fileManager.SetImageExtensions(imageExtensions);
         fileManager.SetParamProcess(infoParams);
         Console.WriteLine("Reading Folders from {0}", fileManager.GetResourcePath());
 
         fileManager.SearchPDFFiles(fileManager.GetResourcePath());
-        fileManager.SearchImageFiles();
         fileManager.CalculatingHasFromFileSystem();
         fileManager.StopProcess();
     }
@@ -92,7 +96,7 @@ void CollectDataFromDSpace()
         dspaceManager.MakeLogin();
 
         Console.WriteLine("Reading Collections from DSpace...");
-        dspaceManager.GetResponseProcessed(RequestType.ForDSpaceCollections);
+        dspaceManager.GetResponseCollections(RequestType.ForDSpaceCollections);
         Console.WriteLine("Validating collections...");
         dspaceManager.ValidateFilterCollections();
 

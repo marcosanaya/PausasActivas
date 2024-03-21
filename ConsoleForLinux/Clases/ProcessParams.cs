@@ -43,6 +43,13 @@ namespace ConsoleForLinux.Clases
 
         [JsonPropertyName("ProxyPassword")]
         public string ProxyPassword { get; set; }
+
+        [JsonPropertyName("IIIFServer")]
+        public string IIIFServer { get; set; }
+
+        [JsonPropertyName("ManifestServer")]
+        public string ManifestServer { get; set; }
+
     }
 
     [JsonSourceGenerationOptions(WriteIndented = true)]

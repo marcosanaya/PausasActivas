@@ -1,4 +1,5 @@
 ﻿using ConsoleForLinux.Clases;
+using ConsoleForLinux.Clases.Manifest;
 using ConsoleForLinux.Helpers;
 using System.Text.Json;
 
@@ -16,29 +17,28 @@ namespace ConsoleForLinux.Business
         private readonly string urlItemsByCollection = "discover/search/objects/?scope=";
         private readonly string urlItems= "core/items";
         private readonly string urlBitstreams = "core/bundles/";
+        private readonly string urlBitstreamsformats = "core/bitstreamformats/";
         private readonly string XSRFTOKENName = "DSPACE-XSRF-TOKEN";
         
         private readonly HttpClientHandler handler;
-        private readonly GenericsManager exceptionManager;
 
-        private string URLRequestPagination = string.Empty;
         private string XSRFTOKENValue = string.Empty;
         private string Token = string.Empty;
+        private bool logged;
         private ProcessParams config;
         private List<string> DSpaceCollectionsIDList = [];
         private List<string> DSpaceItemsIDList = [];
         private DSpaceCollectionsResponse ItemsFromCollections = new();
-
         private List<PDFPathFile> processedFiles = [];
 
         private DSpaceAPIManager()
         {
-            exceptionManager = GenericsManager.GetInstance();
             config = new();
             handler = new()
             {
                 UseProxy = false
             };
+            logged = false;
         }
 
         public static DSpaceAPIManager GetInstance()
@@ -51,6 +51,11 @@ namespace ConsoleForLinux.Business
         {
             if (infoParams is not null)
                 config = infoParams;
+        }
+
+        public bool IsLogged()
+        {
+            return logged;
         }
 
         public string RequestXSRFTOKEN()
@@ -102,12 +107,8 @@ namespace ConsoleForLinux.Business
                 { new StringContent(config.Password), "password" }
             };
 
-            HttpRequestMessage request = new()
-            {
-                Method = HttpMethod.Post,
-                RequestUri = new Uri(string.Concat(config.Host, urlBase, urlLogin)),
-                Content = body
-            };
+            HttpRequestMessage request = MakeRequestMessage(string.Concat(config.Host, urlBase, urlLogin), HttpMethod.Post, body);
+
             request.Headers.Add("X-XSRF-TOKEN", XSRFTOKENValue);
             request.Headers.Add("Cookie", string.Concat("DSPACE-XSRF-COOKIE=", XSRFTOKENValue));
 
@@ -133,20 +134,69 @@ namespace ConsoleForLinux.Business
             }
             else
                 Console.WriteLine("Login successfull.");
-            Token = result.Substring(7);
+            Token = result[7..];
+            logged = true;
 
             return result;
         }
 
-        public DSpaceCollectionsResponse GetResponseProcessed(RequestType requestType)
+        public List<BitStreamFormat> GetBitStreamFormats()
+        {
+            var result = new List<BitStreamFormat>();
+            CustomSerializer serializer = new();
+            HttpClient client = new(handler);
+
+            var URLRequestPagination = string.Concat(config.Host, urlBase, urlBitstreamsformats);
+
+            HttpRequestMessage request = MakeRequestMessage(URLRequestPagination, HttpMethod.Get);
+            try
+            {
+                var response = client.Send(request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    var body = response.Content.ReadAsStringAsync().Result;
+                    var data = JsonDocument.Parse(body).RootElement;
+                    var formats = serializer.GetBitStreamDeserialized(data);
+
+                    for (int i = 1; i < formats.Pagination.TotalPages; i++)
+                    {
+                        string pageparams = "?page=" + i.ToString() + "&size=20";
+                        var urlrequest = string.Concat(URLRequestPagination, pageparams);
+
+                        request = MakeRequestMessage(urlrequest, HttpMethod.Get);
+                        response = client.Send(request);
+                        if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            body = response.Content.ReadAsStringAsync().Result;
+                            data = JsonDocument.Parse(body).RootElement;
+                            var tmpresult = serializer.GetBitStreamDeserialized(data);
+                            formats.Embedded.BitStreamFormats.AddRange(tmpresult.Embedded.BitStreamFormats);
+                        }
+                    }
+                    result = formats.Embedded.BitStreamFormats;
+                }
+            }
+            catch (Exception e)
+            {
+                GenericsManager.PrintExceptionMessage(e);
+
+                Console.WriteLine("It can not get extensions list.");
+                Environment.Exit(0);
+            }
+
+            return result;
+        }
+
+        public DSpaceCollectionsResponse GetResponseCollections(RequestType requestType)
         {
             DSpaceCollectionsResponse result = new();
             DSpaceCollectionsResponse tmpresult = new();
             HttpClient client = new(handler);
 
-            URLRequestPagination = string.Concat(config.Host, urlBase, requestType == RequestType.ForDSpaceCollections ? urlCollections : urlItems);
+            var URLRequestPagination = string.Concat(config.Host, urlBase, requestType == RequestType.ForDSpaceCollections ? urlCollections : urlItems);
 
-            HttpRequestMessage request = MakeRequestMessage(URLRequestPagination);
+            HttpRequestMessage request = MakeRequestMessage(URLRequestPagination, HttpMethod.Get);
 
             try
             {
@@ -165,7 +215,7 @@ namespace ConsoleForLinux.Business
                         string pageparams = "?page=" + i.ToString() + "&size=20";
                         var urlrequest = string.Concat(URLRequestPagination, pageparams);
                         
-                        request = MakeRequestMessage(urlrequest);
+                        request = MakeRequestMessage(urlrequest, HttpMethod.Get);
                         response = client.Send(request);
                         if (response.StatusCode == System.Net.HttpStatusCode.OK)
                         {
@@ -178,7 +228,6 @@ namespace ConsoleForLinux.Business
                             result.Embedded.Items.AddRange(tmpresult.Embedded.Items);
                     }
                     result.Embedded.Collections.ForEach(x => DSpaceCollectionsIDList.Add(x.ID));
-                    result.Embedded.Items.ForEach(x => DSpaceItemsIDList.Add(x.ID));
                 }
             }
             catch (Exception e)
@@ -191,15 +240,24 @@ namespace ConsoleForLinux.Business
             return result;
         }
 
-        private HttpRequestMessage MakeRequestMessage(string url)
+        private HttpRequestMessage MakeRequestMessage(string url, HttpMethod method)
         {
             HttpRequestMessage result = new()
             {
-                Method = HttpMethod.Get,
+                Method = method,
                 RequestUri = new Uri(string.Concat(url)),
             };
 
-            result.Headers.Add(AuthorizationHeaderName, Token);
+            if (Token.Length > 0)
+                result.Headers.Add(AuthorizationHeaderName, Token);
+
+            return result;
+        }
+
+        private HttpRequestMessage MakeRequestMessage(string url, HttpMethod method, MultipartFormDataContent body)
+        {
+            HttpRequestMessage result = MakeRequestMessage(url, method);
+            result.Content = body;
 
             return result;
         }
@@ -224,14 +282,13 @@ namespace ConsoleForLinux.Business
 
             foreach (var item in config.Collections)
             {
-                URLRequestPagination = string.Concat(config.Host, urlBase, urlItemsByCollection, item);
-
-                HttpRequestMessage request = MakeRequestMessage(URLRequestPagination);
+                var URLRequestPagination = string.Concat(config.Host, urlBase, urlItemsByCollection, item);
+                HttpRequestMessage request = MakeRequestMessage(URLRequestPagination, HttpMethod.Get);
 
                 try
                 {
                     var response = client.Send(request);
-                    CustomSerializer serializer = new CustomSerializer();
+                    CustomSerializer serializer = new();
 
                     if (response.StatusCode == System.Net.HttpStatusCode.OK)
                     {
@@ -240,19 +297,19 @@ namespace ConsoleForLinux.Business
 
                         ItemsFromCollections = serializer.GetObjectPagedDeserialized(data);
                         Console.WriteLine("Reading {0} elements", ItemsFromCollections.Pagination.TotalElements);
-                        ItemsFromCollections = serializer.GetSearchResulObjectDeserialized(data);
 
-                        for (int i = 1; i < ItemsFromCollections.Pagination.TotalPages; i++)
+                        for (int i = 0; i < ItemsFromCollections.Pagination.TotalPages; i++)
                         {
-                            string pageparams = "&page=" + i.ToString();
+                            string pageparams = "&page=" + i.ToString() + "&size=20";
                             var urlrequest = string.Concat(URLRequestPagination, pageparams);
-
-                            request = MakeRequestMessage(urlrequest);
+                            
+                            request = MakeRequestMessage(urlrequest, HttpMethod.Get);
                             response = client.Send(request);
                             if (response.StatusCode == System.Net.HttpStatusCode.OK)
                             {
                                 body = response.Content.ReadAsStringAsync().Result;
-                                tmpresult = serializer.GetSearchResulObjectDeserialized(data);
+                                data = JsonDocument.Parse(body).RootElement.GetProperty("_embedded").GetProperty("searchResult").ToString();
+                                tmpresult = serializer.GetSearchResulObjectDeserialized(data.ToString());
                                 ItemsFromCollections.Embedded.Items.AddRange(tmpresult.Embedded.Items);
                             }
                         }
@@ -272,8 +329,6 @@ namespace ConsoleForLinux.Business
         public HashResourcesDB AttachImageFromFiles(List<PDFPathFile> filesScanned, HashResourcesDB db)
         {
             HashResourcesDB result = db;
-            var status = db.GetDataStatus();
-
 
             if (filesScanned.Count == 0)
             {
@@ -294,13 +349,13 @@ namespace ConsoleForLinux.Business
 
                 if (ItemsFromCollections.Embedded.Items.Count > 0)
                 {
+                    var datalist = ItemsFromCollections.Embedded.Items;
                     //Procesando Adjuntado de Archivos, es mandatorio los recursos escaneados y no los recursos adjuntos en cada ítem.
                     foreach (var item in filesScanned)
                     {
-                        var datalist = ItemsFromCollections.Embedded.Items;
                         var pdffilename = item.File.Name;
 
-                        DSpaceItem? dspaceItem = (from p in datalist
+                        List<DSpaceItem> dspaceItem = (from p in datalist
                                                   where p.Metadata.Exists(x => x.Name.Equals("dc.format.filename")
                                                      && x.Value.Equals(pdffilename))
                                                   select new DSpaceItem()
@@ -311,13 +366,18 @@ namespace ConsoleForLinux.Business
                                                       PDFFileName = p.Name,
                                                       Synchronized = true,
                                                   })
-                                                  .FirstOrDefault();
-                        if (dspaceItem != null)
+                                                  .ToList();
+                        if (dspaceItem.Count > 0)
                         {
-                            //DeleteResourcesFromItem(dspaceItem);
-                            RemoveBundleForItem(dspaceItem.UUID);
-                            CreateBundleForItem(dspaceItem.UUID, "ORIGINAL", item.ImageFiles);
-                            db.ResourcesDSpace.Add(dspaceItem);
+                            //RemoveBundleForItem(dspaceItem.UUID);
+                            //CreateBundleForItem(dspaceItem.UUID, "ORIGINAL", item.ImageFiles);
+                            foreach (var dspace in dspaceItem)
+                            {
+                                var dspaceitem = ItemsFromCollections.Embedded.Items.First(i => i.UUID.Equals(dspace.UUID));
+                                var manifest = MakeManifest(dspaceitem, item.ImageFiles);
+                                datalist.RemoveAll(t => t.UUID.Equals(dspace.UUID));
+                            }
+                            db.DSpaceItems.AddRange(dspaceItem);
                         }
                     }
                 }
@@ -330,36 +390,19 @@ namespace ConsoleForLinux.Business
         {
             return processedFiles;
         }
-        
-        
-        
-        
-        
 
-        private void CreateBundleForItem(string id, string bundleName, List<FileInfo> resources)
-        {
-            if (resources.Count > 0)
-                UpdateMiradorForItem(id, true);
-
-            AddFileResourceForItem(id, resources);
-        }
-
-        private void RemoveBundleForItem(string id)
-        {
-            var bundle = GetBundleForItem(id);
-            if(bundle != null)
-            {
-                var test = "detener";
-                //RemoveBundle(metadataValue);
-            }
-        }
-
-        private string GetBundleForItem(string id)
+        private string MakeManifest(DSpaceCollection dspaceitem, List<FileInfo> imageFiles)
         {
             string result = string.Empty;
-
+            Manifest info = new(dspaceitem, config);
+            JsonSerializer.Serialize(info);
             return result;
         }
+
+        
+        
+        
+
 
         private void UpdateMiradorForItem(string id, bool metadataValue)
         {
@@ -392,9 +435,34 @@ namespace ConsoleForLinux.Business
             throw new NotImplementedException();
         }
 
-        private void AddFileResourceForItem(string id, List<FileInfo> resources)
-        {
-            throw new NotImplementedException();
-        }
+        //private void CreateBundleForItem(string id, string bundleName, List<FileInfo> resources)
+        //{
+        //    if (resources.Count > 0)
+        //        UpdateMiradorForItem(id, true);
+
+        //    AddFileResourceForItem(id, resources);
+        //}
+
+        //private void RemoveBundleForItem(string id)
+        //{
+        //    var bundle = GetBundleForItem(id);
+        //    if(bundle != null)
+        //    {
+        //        var test = "detener";
+        //        //RemoveBundle(metadataValue);
+        //    }
+        //}
+
+        //private string GetBundleForItem(string id)
+        //{
+        //    string result = string.Empty;
+
+        //    return result;
+        //}
+
+        //private void AddFileResourceForItem(string id, List<FileInfo> resources)
+        //{
+        //    throw new NotImplementedException();
+        //}
     }
 }

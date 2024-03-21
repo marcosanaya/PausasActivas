@@ -15,9 +15,6 @@ namespace ConsoleForLinux.Helpers
         [JsonPropertyName("_embedded")]
         public EmbeddedObject Embedded { get; set; }
 
-        //[JsonPropertyName("_links")]
-        //public object Links { get; set; }
-
         [JsonPropertyName("page")]
         public DSpacePagination Pagination { get; set; }
 
@@ -55,21 +52,4 @@ namespace ConsoleForLinux.Helpers
     [JsonSerializable(typeof(List<DSpaceCollection>))]
     [JsonSerializable(typeof(DSpacePagination))]
     public partial class DSpaceResponseContext : JsonSerializerContext { }
-
-    public class DSpaceArrayCollectionsResponse
-    {
-        [JsonRequired]
-        [JsonPropertyName("objects")]
-        public List<DSpaceCollection> ItemsOfCollection { get; set; }
-
-        public DSpaceArrayCollectionsResponse()
-        {
-            ItemsOfCollection = [];
-        }
-    }
-
-    [JsonSourceGenerationOptions(WriteIndented = true)]
-    [JsonSerializable(typeof(DSpaceArrayCollectionsResponse))]
-    [JsonSerializable(typeof(List<DSpaceArrayCollectionsResponse>))]
-    public partial class DSpaceArrayResponseContext : JsonSerializerContext { }
 }

@@ -6,3 +6,8 @@
   "UseProxys": false,
   "Collections": [ "cd88df74-1e55-4538-a503-de3f18f554b8", "cd88df74-1e55-4538-a503-de3f18f554b8" ]
 }
+
+  "ResourcePath": "C:\\Proyectos",
+  "Host": "http://192.168.0.20:8080/",
+  "User": "marcosanaya@hotmail.com",
+  "Password": "04921115",
