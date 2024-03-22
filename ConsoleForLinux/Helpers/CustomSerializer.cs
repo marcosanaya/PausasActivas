@@ -49,11 +49,10 @@ namespace ConsoleForLinux.Helpers
                         dspaceItem.Metadata.Add(new DSpaceMetadataDefinition
                         {
                             Name = meta.Name,
-                            Value = item.ToString()
+                            Value = JsonDocument.Parse(item.ToString()).RootElement.GetProperty("value").ToString()
                         });
                 items.Add(dspaceItem);
             }
-
             result.Embedded.Items = items;
 
             return result;

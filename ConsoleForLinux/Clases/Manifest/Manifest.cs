@@ -13,21 +13,27 @@ namespace ConsoleForLinux.Clases.Manifest
         private ConstantsMetada? constants;
 
         [JsonPropertyName("@id")]
-        public string? ID { get; set; }
+        public string ID { get; set; } = string.Empty;
 
         [JsonPropertyName("@context")]
-        public string? Context { get; set; }
+        public string Context { get; set; } = string.Empty ;
 
         [JsonPropertyName("@type")]
-        public string? Type { get; set; }
+        public string Type { get; set; } = string.Empty;
 
         [JsonPropertyName("label")]
-        public string? Label { get; set; }
-        //public List<Metadata> Metas { get; set; }
-        //public List<Sequence> Sequences { get; set; }
-        //public Thumbnail Thumb { get; set; }
+        public string Label { get; set; } = string.Empty;
 
-        public Manifest(DSpaceCollection dspaceitem, ProcessParams config)
+        [JsonPropertyName("metadata")]
+        public List<Metadata> Metas { get; set; } = [];
+
+        [JsonPropertyName("sequences")]
+        public List<Sequence> Sequences { get; set; } = [];
+
+        [JsonPropertyName("thumbnail")]
+        public Thumbnail? Thumb { get; set; }
+
+        public Manifest(DSpaceCollection dspaceitem, List<ImageResource> imageFiles, ProcessParams config)
         {
             if(dspaceitem == null)
                 return;
@@ -38,6 +44,10 @@ namespace ConsoleForLinux.Clases.Manifest
             ID = constants.GetContextID(dspaceitem.UUID);
             var info = dspaceitem.Metadata.FirstOrDefault(m => m.Name.Equals("dc.title"));
             Label = (info != null) ? info.Value : string.Empty;
+            if(imageFiles.Count > 0)
+                Thumb = new(imageFiles[0], config);
+            Sequences = constants.GetSequencesManifest(imageFiles);
+            Metas = ConstantsMetada.GetMetadataManifest(dspaceitem);
         }
     }
 }

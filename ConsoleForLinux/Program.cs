@@ -59,11 +59,8 @@ void CollectDataFromFileSystem()
     try
     {
         var allExtensions = dspaceManager.GetBitStreamFormats();
-        List<string> imageExtensions = [];
+        List<BitStreamFormat> imageExtensions = allExtensions.Where(e => e.MimeType.Contains("image/")).ToList();
 
-        allExtensions.Where(e => e.MimeType.Contains("image/"))
-            .ToList()
-            .ForEach(r => r.Extensions.ForEach(x => imageExtensions.Add(x)));
         fileManager.SetImageExtensions(imageExtensions);
         fileManager.SetParamProcess(infoParams);
         Console.WriteLine("Reading Folders from {0}", fileManager.GetResourcePath());
@@ -112,7 +109,7 @@ void CollectDataFromDSpace()
         var filesScanned = fileManager.GetPDFPathFiles() ?? [];
         var db = fileManager.GetHashDB();
 
-        dspaceManager.AttachImageFromFiles(filesScanned, db);
+        dspaceManager.AttachImageFromFiles(new(filesScanned), db);
         dspaceManager.StopProcess();
     }
     catch (Exception e)

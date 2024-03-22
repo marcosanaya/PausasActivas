@@ -3,7 +3,7 @@
   "Host": "http://192.168.0.20:8080/",
   "User": "marcosanaya@hotmail.com",
   "Password": "04921115",
-  "IIFServer": "http://192.168.0.20:8182/iiif/2/",
+  "IIIFServer": "http://192.168.0.20:8182/iiif/2/",
   "ManifestServer": "http://192.168.0.20/manifest/",
   "UseProxy": false,
   "Collections": [ "6b62a708-1fbd-457f-a949-800a106cca0b", "cd88df74-1e55-4538-a503-de3f18f554b8", "dc41f0e6-ebb1-41c3-b479-096e753d4257" ]

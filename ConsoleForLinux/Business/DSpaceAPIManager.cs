@@ -16,7 +16,6 @@ namespace ConsoleForLinux.Business
         private readonly string urlCollections = "core/collections/";
         private readonly string urlItemsByCollection = "discover/search/objects/?scope=";
         private readonly string urlItems= "core/items";
-        private readonly string urlBitstreams = "core/bundles/";
         private readonly string urlBitstreamsformats = "core/bitstreamformats/";
         private readonly string XSRFTOKENName = "DSPACE-XSRF-TOKEN";
         
@@ -123,7 +122,7 @@ namespace ConsoleForLinux.Business
             }
             catch (Exception)
             {
-                Console.WriteLine("It can not reach url, enter new URL in Host variable in ParamConfiguration.json file.");
+                Console.WriteLine("It can not reach url, enter new URL in Host variable in ParamConfiguration.json itemfile.");
                 Environment.Exit(0);
             }
 
@@ -349,35 +348,34 @@ namespace ConsoleForLinux.Business
 
                 if (ItemsFromCollections.Embedded.Items.Count > 0)
                 {
-                    var datalist = ItemsFromCollections.Embedded.Items;
+                    List<DSpaceCollection> datalist = new(ItemsFromCollections.Embedded.Items);
                     //Procesando Adjuntado de Archivos, es mandatorio los recursos escaneados y no los recursos adjuntos en cada ítem.
-                    foreach (var item in filesScanned)
+                    foreach (var itemfile in filesScanned)
                     {
-                        var pdffilename = item.File.Name;
-
-                        List<DSpaceItem> dspaceItem = (from p in datalist
-                                                  where p.Metadata.Exists(x => x.Name.Equals("dc.format.filename")
-                                                     && x.Value.Equals(pdffilename))
-                                                  select new DSpaceItem()
-                                                  {
-                                                      HasImageFiles = item.HasImageFiles,
-                                                      ID = p.ID,
-                                                      UUID = p.UUID,
-                                                      PDFFileName = p.Name,
-                                                      Synchronized = true,
-                                                  })
-                                                  .ToList();
-                        if (dspaceItem.Count > 0)
+                        var pdffilename = itemfile.File.Name;
+                        List<DSpaceItem> dspaceItems = (from p in datalist
+                                                        where p.Metadata.Exists(x => x.Name.Equals("dc.format.filename")
+                                                           && x.Value.Equals(pdffilename))
+                                                        select new DSpaceItem()
+                                                        {
+                                                            HasImageFiles = itemfile.HasImageFiles,
+                                                            ID = p.ID,
+                                                            UUID = p.UUID,
+                                                            PDFFileName = p.Name,
+                                                            Synchronized = true,
+                                                        }).ToList();
+                        
+                        if (dspaceItems.Count > 0)
                         {
-                            //RemoveBundleForItem(dspaceItem.UUID);
-                            //CreateBundleForItem(dspaceItem.UUID, "ORIGINAL", item.ImageFiles);
-                            foreach (var dspace in dspaceItem)
+                            //RemoveBundleForItem(dspaceItems.UUID);
+                            //CreateBundleForItem(dspaceItems.UUID, "ORIGINAL", itemfile.ImageFiles);
+                            foreach (var dspace in dspaceItems)
                             {
                                 var dspaceitem = ItemsFromCollections.Embedded.Items.First(i => i.UUID.Equals(dspace.UUID));
-                                var manifest = MakeManifest(dspaceitem, item.ImageFiles);
+                                var manifest = MakeManifest(dspaceitem, itemfile.ImageFiles);
                                 datalist.RemoveAll(t => t.UUID.Equals(dspace.UUID));
                             }
-                            db.DSpaceItems.AddRange(dspaceItem);
+                            db.DSpaceItems.AddRange(dspaceItems);
                         }
                     }
                 }
@@ -391,11 +389,11 @@ namespace ConsoleForLinux.Business
             return processedFiles;
         }
 
-        private string MakeManifest(DSpaceCollection dspaceitem, List<FileInfo> imageFiles)
+        private string MakeManifest(DSpaceCollection dspaceitem, List<ImageResource> imageFiles)
         {
             string result = string.Empty;
-            Manifest info = new(dspaceitem, config);
-            JsonSerializer.Serialize(info);
+            Manifest info = new(dspaceitem, imageFiles, config);
+            result = JsonSerializer.Serialize(info);
             return result;
         }
 

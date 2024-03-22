@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.Text.Json;
 using ConsoleForLinux.Helpers;
+using System.Drawing;
 
 namespace ConsoleForLinux.Business
 {
@@ -18,7 +19,10 @@ namespace ConsoleForLinux.Business
 
         private ProcessParams config;
         private List<PDFPathFile> PDFPathFiles = [];
+        private List<string> PDFRepeated = [];
         private List<string> ImageExtensions = [];
+        private List<BitStreamFormat> mimeList;
+
         //private List<string> ImageExtensions = ["aces", "apng", "avci", "avcs", "avif", "bmp", "cgm", "dicom-rle", "dpx", "emf", "example", "fits", "g3fax", "gif", "heic", "heic-sequence", "heif", "heif-sequence", "hej2k", "hsj2", "ief", "j2c", "jls", "jp2", "jpeg", "jph", "jphc", "jpm", "jpx", "jxl", "jxr", "jxrA", "jxrS", "jxs", "jxsc", "jxsi", "jxss", "ktx", "ktx2", "naplps", "png", "prs.btif", "prs.pti", "pwg-raster", "svg+xml", "t38", "tiff", "tiff-fx", "vnd.adobe.photoshop", "vnd.airzip.accelerator.azv", "vnd.cns.inf2", "vnd.dece.graphic", "vnd.djvu", "vnd.dwg", "vnd.dxf", "vnd.dvb.subtitle", "vnd.fastbidsheet", "vnd.fpx", "vnd.fst", "vnd.fujixerox.edmics-mmr", "vnd.fujixerox.edmics-rlc", "vnd.globalgraphics.pgb", "vnd.microsoft.icon", "vnd.mix", "vnd.ms-modi", "vnd.mozilla.apng", "vnd.net-fpx", "vnd.pco.b16", "vnd.radiance", "vnd.sealed.png", "vnd.sealedmedia.softseal.gif", "vnd.sealedmedia.softseal.jpg", "vnd.svf", "vnd.tencent.tap", "vnd.valve.source.texture", "vnd.wap.wbmp", "vnd.xiff", "vnd.zbrush.pcx", "webp", "wmf", "x-emf", "x-wmf","tif"];
 
         private FileResourcesManager()
@@ -55,23 +59,34 @@ namespace ConsoleForLinux.Business
             foreach (var item in pdffilelist)
             {
                 var filesAtDirectory = item.Directory ?? new("");
-                var resourcesList = new List<FileInfo>();
+                var resourcesList = new List<ImageResource>();
 
                 foreach (var itemFile in filesAtDirectory.GetFiles())
                     if (itemFile.Extension.Length >= 3)
                         if (ImageExtensions.Contains(itemFile.Extension[1..]))
-                            resourcesList.Add(itemFile);
+                        {
+                            var mime = (from m in mimeList
+                                        where m.Extensions.Exists(e => e.Equals(itemFile.Extension[1..]))
+                                        select m).FirstOrDefault()?? new();
+                            Bitmap img = new(itemFile.FullName);
 
+                            resourcesList.Add(new ImageResource(itemFile)
+                            {
+                                Height = img.Height,
+                                Width = img.Width,
+                                MimeFormat = mime.MimeType
+                            });
+                        }
                 if (resourcesList.Count > 0)
                     PDFPathFiles.Add(new PDFPathFile
                     {
+                        Name = item.Name,
                         File = item,
                         HashResources = string.Empty,
                         HasImageFiles = false,
                         ImageFiles = resourcesList
                     });
             }
-
             Console.WriteLine("Founded {0} PDF files ", PDFPathFiles.Count);
         }
 
@@ -82,7 +97,7 @@ namespace ConsoleForLinux.Business
             foreach (var item in PDFPathFiles)
             {
                 foreach (var img in item.ImageFiles)
-                    imagesSeed += string.Concat(img.Name, img.Length.ToString(), img.CreationTime, img.LastWriteTime);
+                    imagesSeed += string.Concat(img.PhysicalImage.Name, img.PhysicalImage.Length.ToString(), img.PhysicalImage.CreationTime, img.PhysicalImage.LastWriteTime);
 
                 string itemSeed = string.Concat(item.File.Name, item.File.Length.ToString(), item.File.CreationTime, item.File.LastWriteTime, imagesSeed);
                 byte[] seedBytes = Encoding.UTF8.GetBytes(itemSeed);
@@ -98,7 +113,18 @@ namespace ConsoleForLinux.Business
 
         public List<PDFPathFile> GetPDFPathFiles()
         {
-            return IsStillRunning() ? [] : PDFPathFiles;
+            List<PDFPathFile> result = new(PDFPathFiles);
+
+            if (!IsStillRunning())
+            {
+                PDFRepeated = PDFPathFiles.GroupBy(x => x.Name).ToList().Where(x => x.Count() > 1).Select(i => i.Key).ToList();
+                PDFRepeated.ForEach(x =>
+                {
+                    result.RemoveAll(i => i.Name.Equals(x));
+                });
+            }
+
+            return result;
         }
 
         public HashResourcesDB GetHashDB()
@@ -134,6 +160,7 @@ namespace ConsoleForLinux.Business
         {
             HashResourcesDB data = new();
             var hashfiledbInfo = (from f in PDFPathFiles
+                                  where !PDFRepeated.Contains(f.Name)
                                 select new ResourceItem()
                                 {
                                     CountImages = f.ImageFiles.Count,
@@ -161,9 +188,10 @@ namespace ConsoleForLinux.Business
             }
         }
 
-        public void SetImageExtensions(List<string> extensions)
+        public void SetImageExtensions(List<BitStreamFormat> extensions)
         {
-            this.ImageExtensions = extensions;
+            extensions.ForEach(i => i.Extensions.ForEach(j => ImageExtensions.Add(j)));
+            this.mimeList = extensions;
         }
     }
 }
