@@ -82,14 +82,20 @@ namespace ConsoleForLinux.Clases.Manifest
         [JsonPropertyName("@id")]
         public string ID { get; set; } = string.Empty;
 
-        [JsonPropertyName("type")]
+        [JsonPropertyName("@type")]
         public string Type { get; set; } = string.Empty;
 
         [JsonPropertyName("service")]
-        public ServicesThumbnail Service { get; set; } = new();
+        public ServicesBase Service { get; set; } = new();
 
         [JsonPropertyName("format")]
         public string Format { get; set; } = string.Empty;
+
+        [JsonPropertyName("width")]
+        public int Width { get; set; }
+
+        [JsonPropertyName("height")]
+        public int Height { get; set; }
 
         public Resource()
         {

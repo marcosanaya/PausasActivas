@@ -78,7 +78,7 @@ namespace ConsoleForLinux.Clases.Manifest
                 var founded = dspaceitem.Metadata.Where(m=>m.Name.Contains(item.Item1)).ToList();
                 StringBuilder sb = new();
                 foreach (var dato in founded)
-                    sb.Append(dato.Value);
+                    sb.AppendLine(dato.Value);
 
                 result.Add(new()
                 {
@@ -101,7 +101,7 @@ namespace ConsoleForLinux.Clases.Manifest
 
                 Canvas newCanvas = new()
                 {
-                    ID = string.Concat(parametros.ManifestServer, imagen),
+                    ID = GetIIIFURLImage(item.PhysicalImage.FullName),
                     Type = CanvasType,
                     Label = imagen,
                     Height = item.Height,
@@ -111,12 +111,16 @@ namespace ConsoleForLinux.Clases.Manifest
 
                 Resource resource = new()
                 {
-                    ID = GetIIIFURLImage(item.PhysicalImage.FullName),
+                    //ID = GetIIIFURLImage(item.PhysicalImage.FullName),
+                    ID = IIIFURLBase(item.PhysicalImage.FullName),
                     Type = ResourceType,
                     Format = item.MimeFormat,
+                    Height = item.Height,
+                    Width = item.Width,
                     Service = new()
                     {
-                        ID = GetIIIFURLImage(item.PhysicalImage.FullName)
+                        //ID = GetIIIFURLImage(item.PhysicalImage.FullName)
+                        ID = IIIFURLBase(item.PhysicalImage.FullName)
                     }
                 };
 

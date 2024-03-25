@@ -2,16 +2,6 @@
 
 namespace ConsoleForLinux.Clases.Manifest
 {
-    /*
- "@id": "http://192.168.0.20:8182/iiif/2/af26a741-7542-4ecb-bbce-2bcb0a68c86d/full/90,/0/default.jpg",
-        "service": {
-            "@context": "http://iiif.io/api/image/2/context.json",
-            "@id": "http://192.168.0.20:8182/iiif/2/af26a741-7542-4ecb-bbce-2bcb0a68c86d",
-            "profile": "http://iiif.io/api/image/2/level0.json",
-            "protocol": "http://iiif.io/api/image"
-        },
-        "format": "image/jpeg"     
-     */
     public class Thumbnail
     {
         private ConstantsMetada? metada;
@@ -30,12 +20,12 @@ namespace ConsoleForLinux.Clases.Manifest
             metada = new(param);
 
             ID = metada.GetIIIFURLThumbnail(fileInfo.PhysicalImage.FullName);
-            Service.ID = metada.IIIFURLBase(fileInfo.PhysicalImage.FullName);
+            Service.ID = metada.GetIIIFURLThumbnail(fileInfo.PhysicalImage.FullName);
             Format = fileInfo.MimeFormat;
         }
     }
 
-    public class ServicesThumbnail
+    public class ServicesBase
     {
         [JsonPropertyName("@id")]
         public string ID { get; set; } = string.Empty;
@@ -46,8 +36,16 @@ namespace ConsoleForLinux.Clases.Manifest
         [JsonPropertyName("profile")]
         public string Profile { get; set; } = string.Empty;
 
+        public ServicesBase()
+        {
+            Context = ConstantsMetada.ThumbnailServiceContext;
+            Profile = ConstantsMetada.ThumbnailServiceProfile;
+        }
+    }
+    public class ServicesThumbnail: ServicesBase
+    {
         [JsonPropertyName("protocol")]
-        public string Protocol { get; set; } = string.Empty ;
+        public string Protocol { get; set; } = string.Empty;
 
         public ServicesThumbnail()
         {

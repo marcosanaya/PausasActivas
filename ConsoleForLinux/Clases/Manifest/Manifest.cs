@@ -44,7 +44,8 @@ namespace ConsoleForLinux.Clases.Manifest
             ID = constants.GetContextID(dspaceitem.UUID);
             var info = dspaceitem.Metadata.FirstOrDefault(m => m.Name.Equals("dc.title"));
             Label = (info != null) ? info.Value : string.Empty;
-            if(imageFiles.Count > 0)
+            Label = string.Concat(Label, " ", "Anaya.");
+            if (imageFiles.Count > 0)
                 Thumb = new(imageFiles[0], config);
             Sequences = constants.GetSequencesManifest(imageFiles);
             Metas = ConstantsMetada.GetMetadataManifest(dspaceitem);

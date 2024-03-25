@@ -21,7 +21,7 @@ namespace ConsoleForLinux.Business
         private List<PDFPathFile> PDFPathFiles = [];
         private List<string> PDFRepeated = [];
         private List<string> ImageExtensions = [];
-        private List<BitStreamFormat> mimeList;
+        private List<BitStreamFormat> mimeList = [];
 
         //private List<string> ImageExtensions = ["aces", "apng", "avci", "avcs", "avif", "bmp", "cgm", "dicom-rle", "dpx", "emf", "example", "fits", "g3fax", "gif", "heic", "heic-sequence", "heif", "heif-sequence", "hej2k", "hsj2", "ief", "j2c", "jls", "jp2", "jpeg", "jph", "jphc", "jpm", "jpx", "jxl", "jxr", "jxrA", "jxrS", "jxs", "jxsc", "jxsi", "jxss", "ktx", "ktx2", "naplps", "png", "prs.btif", "prs.pti", "pwg-raster", "svg+xml", "t38", "tiff", "tiff-fx", "vnd.adobe.photoshop", "vnd.airzip.accelerator.azv", "vnd.cns.inf2", "vnd.dece.graphic", "vnd.djvu", "vnd.dwg", "vnd.dxf", "vnd.dvb.subtitle", "vnd.fastbidsheet", "vnd.fpx", "vnd.fst", "vnd.fujixerox.edmics-mmr", "vnd.fujixerox.edmics-rlc", "vnd.globalgraphics.pgb", "vnd.microsoft.icon", "vnd.mix", "vnd.ms-modi", "vnd.mozilla.apng", "vnd.net-fpx", "vnd.pco.b16", "vnd.radiance", "vnd.sealed.png", "vnd.sealedmedia.softseal.gif", "vnd.sealedmedia.softseal.jpg", "vnd.svf", "vnd.tencent.tap", "vnd.valve.source.texture", "vnd.wap.wbmp", "vnd.xiff", "vnd.zbrush.pcx", "webp", "wmf", "x-emf", "x-wmf","tif"];
 
@@ -63,10 +63,10 @@ namespace ConsoleForLinux.Business
 
                 foreach (var itemFile in filesAtDirectory.GetFiles())
                     if (itemFile.Extension.Length >= 3)
-                        if (ImageExtensions.Contains(itemFile.Extension[1..]))
+                        if (ImageExtensions.Exists(e=> e.ToUpper().Equals(itemFile.Extension.ToUpper()[1..])))
                         {
                             var mime = (from m in mimeList
-                                        where m.Extensions.Exists(e => e.Equals(itemFile.Extension[1..]))
+                                        where m.Extensions.Exists(e => e.ToUpper().Equals(itemFile.Extension.ToUpper()[1..]))
                                         select m).FirstOrDefault()?? new();
                             Bitmap img = new(itemFile.FullName);
 
